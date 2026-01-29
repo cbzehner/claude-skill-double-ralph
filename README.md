@@ -1,6 +1,6 @@
 # Double Ralph
 
-Nested agent loops for executing implementation plans. What could possibly go wrong?
+Iterative implementation loops with review checkpoints. What could possibly go wrong?
 
 > *"More Ralphs is always better, rite?"*
 >
@@ -31,9 +31,9 @@ Nested agent loops for executing implementation plans. What could possibly go wr
 
 Long tasks lose context. Claude forgets what it was doing 47 tool calls ago. Double Ralph fixes this by:
 
-1. **Chunking work** - Inner Ralphs work on one section at a time
+1. **Chunking work** - Inner Ralphs work on one unit at a time
 2. **Reviewing progress** - Magi checks each chunk before continuing
-3. **Persisting state** - Everything is saved to the plan file, so you can stop and resume
+3. **Persisting state** - Everything saved to file, so you can stop and resume
 
 It's like having a responsible adult supervise the hyperactive code monkeys.
 
@@ -60,10 +60,10 @@ git clone https://github.com/cbzehner/claude-skill-double-ralph.git double-ralph
 ## Usage
 
 ```
-/double-ralph <plan-file>
+/double-ralph [state-file]
 ```
 
-Point it at a plan file and watch the Ralphs go:
+Point it at a plan or task file and watch the Ralphs go:
 
 ```
 You: /double-ralph plans/auth-system.md
@@ -77,9 +77,53 @@ Claude: [Outer Ralph reads the plan]
         [Repeat until victory or /triple-ralph]
 ```
 
-## Plan File Format
+## Project Guidance (.ralph.md)
 
-Plans use YAML frontmatter to track state:
+Double-ralph adapts to your project's conventions via a `.ralph.md` file at your repo root.
+
+### What It Does
+
+Without `.ralph.md`: Uses default plan-file conventions (YAML frontmatter + ## sections).
+
+With `.ralph.md`: Adapts to your project's way of doing things:
+- Where state files live
+- How to identify work units (sections, acceptance criteria, issues)
+- When and how to review
+- How to signal completion
+
+### Creating One
+
+Run `/double-ralph` without a `.ralph.md` and you'll be offered the choice to create one. The skill asks questions about your project and generates a starter file.
+
+Or see `examples/` for templates:
+- `plan-based.ralph.md` - Traditional plan files with ## sections
+- `task-based.ralph.md` - Task files with acceptance criteria (launchpad-style)
+- `github-issues.ralph.md` - GitHub issues as work units
+- `minimal.ralph.md` - Simplest possible configuration
+
+See `examples/README.md` for a guide on crafting your own.
+
+### Example .ralph.md
+
+```markdown
+# .ralph.md - My Project
+
+## State Files
+Tasks in `.tasks/` with YAML frontmatter and acceptance criteria.
+
+## Work Units
+Each unchecked criterion is a work unit. Group related criteria.
+
+## Review
+Self-review after each unit. Magi review before completion.
+
+## Completion
+When all criteria met: signal done via `/done`.
+```
+
+## Default State Format
+
+When no `.ralph.md` is found, uses YAML frontmatter + markdown sections:
 
 ```markdown
 ---
@@ -97,12 +141,9 @@ What to build...
 
 ## Section 2: The Hard Part
 The actual work...
-
-## Section 3: The Tests
-Proof it works...
 ```
 
-Frontmatter gets added automatically if missing. Double Ralph is helpful like that.
+Frontmatter gets added automatically if missing.
 
 ## The Loop
 
@@ -110,15 +151,15 @@ Frontmatter gets added automatically if missing. Double Ralph is helpful like th
 ┌─────────────────────────────────────────────────────────┐
 │                     OUTER RALPH                         │
 │                                                         │
-│  1. LOAD    → Read plan, parse frontmatter              │
-│  2. ASSESS  → Find next incomplete section              │
+│  1. LOAD    → Find .ralph.md, read state file           │
+│  2. ASSESS  → Find next incomplete work unit            │
 │  3. SPAWN   → Inner Ralph implements it                 │
-│  4. REVIEW  → Magi checks the work                      │
-│  5. UPDATE  → Save progress, gaps, edge cases           │
-│  6. ROUTE   → Continue | Ask human | Archive            │
+│  4. REVIEW  → Magi (or self) checks the work            │
+│  5. UPDATE  → Save progress per guidance                │
+│  6. ROUTE   → Continue | Ask human | Complete           │
 │                                                         │
 │  Inner Ralph exits when:                                │
-│  • Section complete                                     │
+│  • Work unit complete                                   │
 │  • Hit a blocker                                        │
 │  • ~15-20 turns (context getting heavy)                 │
 │  • Existential crisis                                   │
@@ -127,10 +168,10 @@ Frontmatter gets added automatically if missing. Double Ralph is helpful like th
 
 ## Completion
 
-The plan gets archived when:
-1. Magi says "this is done"
+Work gets marked complete when:
+1. Review says "this is done"
 2. AND no gaps remain
-3. AND no edge cases remain
+3. AND per-guidance completion signals sent
 
 Until then, the Ralphs keep Ralphing.
 
@@ -140,7 +181,8 @@ Until then, the Ralphs keep Ralphing.
 |---------|----------|
 | Magi unavailable | Ralph reviews Ralph (it's fine) |
 | Inner Ralph blocked | Asks you for help |
-| Plan file broken | Shows error, asks you to fix it |
+| State file broken | Shows error, asks you to fix it |
+| No .ralph.md | Offers to create one or uses defaults |
 | Triple Ralph attempted | *inconceivable* |
 
 ## Files
@@ -154,14 +196,19 @@ double-ralph/
 ├── docs/
 │   └── ARCHITECTURE.md   # The serious documentation
 ├── examples/
-│   └── example-plan.md   # A sample plan
+│   ├── README.md         # Guide for crafting .ralph.md
+│   ├── plan-based.ralph.md
+│   ├── task-based.ralph.md
+│   ├── github-issues.ralph.md
+│   ├── minimal.ralph.md
+│   └── example-plan.md   # A sample plan file
 └── plans/
     └── archived/         # Where completed plans go to rest
 ```
 
 ## Manual Override
 
-Interrupt anytime. State is saved to the plan file. Come back later and `/double-ralph` picks up where it left off. The Ralphs are patient.
+Interrupt anytime. State is saved to file. Come back later and `/double-ralph` picks up where it left off. The Ralphs are patient.
 
 ## License
 

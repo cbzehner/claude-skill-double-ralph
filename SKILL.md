@@ -1,24 +1,58 @@
 ---
 name: double-ralph
-description: Nested agent loop for plan execution. Outer loop orchestrates planning/review, inner loops implement. Use when you have a plan file to execute incrementally with magi review between chunks.
+description: Iterative implementation loop with review checkpoints. Use for multi-step tasks that benefit from chunked execution and verification. Adapts to project-specific conventions via .ralph.md guidance file.
 ---
 
-# Double Ralph: Nested Agent Loop
+# Double Ralph: Iterative Implementation Loop
 
-Execute a plan file through iterative implementation cycles with magi review.
+Execute work through iterative cycles with review checkpoints between chunks.
 
 ## Invocation
 
 ```
-/double-ralph <plan-file>
+/double-ralph [state-file]
 ```
 
-Example: `/double-ralph plans/my-feature.md`
+Examples:
+- `/double-ralph plans/my-feature.md` - Execute a plan file
+- `/double-ralph` - Auto-detect state file per project guidance
 
-## Plan File Format
+## Project Guidance
 
-Plans must have YAML frontmatter:
+Double-ralph adapts to project-specific conventions via a `.ralph.md` file.
 
+### Finding .ralph.md
+
+Search in order:
+1. **Git repository root**: `git rev-parse --show-toplevel` then check for `.ralph.md`
+2. **Walk up from current directory**: Check each parent until `.ralph.md` found or root reached
+3. **State file's directory**: If state file provided, check its directory
+
+```bash
+# Get git project root
+git rev-parse --show-toplevel 2>/dev/null
+```
+
+### If No .ralph.md Found
+
+Use AskUserQuestion to offer creating one:
+
+"No `.ralph.md` found for this project. Would you like to create one?"
+- **Yes, help me create it** - Ask design questions, generate .ralph.md
+- **Use defaults** - Continue with plan-file conventions
+- **Skip for now** - Continue without guidance
+
+See `examples/` in this skill's directory for templates and the README for guidance on crafting .ralph.md files.
+
+## The Loop
+
+### 1. LOAD
+
+1. Find and load `.ralph.md` if present (provides project-specific guidance)
+2. Read the state file
+3. Parse state according to guidance (or use default plan format)
+
+**Default format** (when no .ralph.md):
 ```yaml
 ---
 status: pending  # pending | in_progress | complete | archived
@@ -28,38 +62,23 @@ progress: []
 last_review: null
 ---
 
-# Plan Title
+# Title
 
-## Section 1: Description
+## Section 1
 ...
 ```
 
-## Outer Loop Execution
-
-When invoked, execute this loop:
-
-### 1. LOAD
-
-Read the plan file. Parse YAML frontmatter and markdown sections.
-
-If the file lacks frontmatter, add it:
-```yaml
----
-status: pending
-gaps: []
-edge_cases: []
-progress: []
-last_review: null
----
-```
+If file lacks frontmatter, add defaults.
 
 ### 2. ASSESS
 
-- If `status: archived` → inform user and exit
-- If `status: pending` → update to `in_progress`
-- Identify next section: first `## ` heading without `status: complete` in progress array
-
-If all sections complete, proceed to final review (step 4 with completeness focus).
+- Check completion status → if complete/archived, inform user and exit
+- Update status to `in_progress` if pending
+- Identify work units per guidance:
+  - **Default**: `## ` headings not in progress array
+  - **Per guidance**: acceptance criteria, issues, custom sections
+- Group related units if guidance suggests logical groupings
+- If all units complete → proceed to final review
 
 ### 3. SPAWN INNER LOOP
 
@@ -68,16 +87,22 @@ Use the Task tool to spawn a subagent:
 ```
 Task(
   subagent_type: "general-purpose",
-  description: "Implement: [section name]",
-  prompt: [load inner-prompt.md template, fill in plan context and current section]
+  description: "Implement: [work unit summary]",
+  prompt: [see inner-prompt.md, include project guidance if present]
 )
 ```
 
-Await the subagent's return. It will provide a structured summary.
+Inner loop works until:
+- Work unit complete
+- Blocked (needs decision, unclear requirement)
+- ~15-20 turns (context management)
+- Context feels heavy
 
-### 4. REVIEW WITH MAGI
+Returns structured summary (see inner-prompt.md for format).
 
-Invoke `/magi` with synthesis mode:
+### 4. REVIEW
+
+Review method per `.ralph.md` guidance. Default: magi synthesis.
 
 ```
 /magi "Review this implementation work:
@@ -85,14 +110,14 @@ Invoke `/magi` with synthesis mode:
 ## Work Summary
 [inner loop's returned summary]
 
-## Plan Section
-[the section that was being implemented]
+## Work Unit
+[what was being implemented]
 
 ## Evaluate
 1. Implementation correctness - Does it work? Tests pass?
-2. Plan alignment - Did the work match the intended section?
+2. Alignment - Did the work match the intended unit?
 3. Gap discovery - Any new gaps, edge cases, or TODOs?
-4. Completeness - Is the overall plan now fully realized?
+4. Completeness - Is the overall work fully realized?
 
 Return structured assessment:
 - verdict: pass | fail | needs_work
@@ -103,52 +128,55 @@ Return structured assessment:
 - rationale: [brief explanation]"
 ```
 
-### 5. UPDATE PLAN FILE
+**Fallback**: If magi unavailable, perform the review yourself.
 
-Based on magi's response:
-- Append new gaps to `gaps:` array
-- Append new edge cases to `edge_cases:` array
-- Update `progress:` array for the section worked on
-- Set `last_review:` to current ISO timestamp
+### 5. UPDATE STATE
 
-Write the updated plan file.
+Update the state file per guidance:
+- **Default**: Update frontmatter arrays (gaps, edge_cases, progress)
+- **Per guidance**: Check off criteria, append to sections, etc.
+
+Set review timestamp.
 
 ### 6. ROUTE
 
-Based on magi's recommendation:
-
-**`needs_human_input`**: Use AskUserQuestion to surface the decision. Present:
-- What was attempted
-- What needs clarification
-- Options if applicable
-
-After user responds, continue to step 2.
-
-**`archive`**:
-- Check that `gaps:` and `edge_cases:` arrays are empty
-- If empty: set `status: archived`, move file to `archived/` subdirectory
-- If not empty: inform user of remaining items, continue to step 2
+Based on review recommendation:
 
 **`continue`**: Go to step 2.
+
+**`needs_human_input`**:
+- Use AskUserQuestion to surface the decision
+- Present: what was attempted, what needs clarification, options
+- After response → step 2
+
+**`archive`** (or equivalent completion):
+- Verify no remaining gaps/issues per guidance
+- Mark complete and move/archive per guidance
+- If issues remain → inform user, continue to step 2
 
 ## Completion Criteria
 
 The loop completes when:
-1. Magi assesses the plan as "fully realized" (recommends `archive`)
-2. AND `gaps:` array is empty
-3. AND `edge_cases:` array is empty
+1. Review assesses work as "fully realized"
+2. No remaining gaps or blockers
+3. Per-guidance completion signals sent (if applicable)
 
 ## Error Handling
 
-- **Magi unavailable**: Continue with the review in the main Claude context (perform the same evaluation yourself)
-- **Inner loop blocked**: Surface blocker via AskUserQuestion
-- **Plan file parse error**: Show error, ask user to fix format
+| Scenario | Action |
+|----------|--------|
+| Magi unavailable | Self-review (continue functioning) |
+| Inner loop blocked | Surface via AskUserQuestion |
+| State file parse error | Show error, ask user to fix |
+| No .ralph.md | Offer to create or use defaults |
 
 ## Manual Control
 
-The user can interrupt at any time. The plan file preserves state, so `/double-ralph` can resume where it left off.
+Interrupt anytime. State file preserves progress. Resume with `/double-ralph [state-file]`.
 
 ## Reference
 
-See `docs/ARCHITECTURE.md` for full architecture documentation.
-See `inner-prompt.md` for the inner loop subagent template.
+- `inner-prompt.md` - Inner loop subagent template
+- `examples/` - Example .ralph.md files for different project types
+- `examples/README.md` - Guide for crafting .ralph.md files
+- `docs/ARCHITECTURE.md` - Full architecture documentation

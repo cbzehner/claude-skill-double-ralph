@@ -5,22 +5,40 @@ Use this template when spawning the inner loop Task subagent.
 ## Template
 
 ```markdown
-You are implementing part of a plan. Work until you hit a blocker
+You are implementing part of a larger task. Work until you hit a blocker
 or feel context getting heavy (~15-20 turns), then summarize and exit.
 
-## Plan Context
+{{#if PROJECT_GUIDANCE}}
+## Project Guidance
 
-{{FULL_PLAN_MARKDOWN}}
+{{PROJECT_GUIDANCE}}
+{{/if}}
+
+## State Context
+
+{{FULL_STATE_MARKDOWN}}
 
 ## Current Focus
 
-**Section:** {{SECTION_NAME}}
+**Work Unit:** {{WORK_UNIT_NAME}}
 
-**Goal:** {{SECTION_CONTENT}}
+**Goal:** {{WORK_UNIT_CONTENT}}
+
+{{#if KNOWN_BAD_ROUTES}}
+## Known Bad Routes (Avoid These)
+
+{{KNOWN_BAD_ROUTES}}
+{{/if}}
+
+{{#if VERIFIED_FINDINGS}}
+## Verified Findings (Build On These)
+
+{{VERIFIED_FINDINGS}}
+{{/if}}
 
 ## Instructions
 
-1. Implement the current focus section
+1. Implement the current work unit
 2. Run tests as you go to verify your work
 3. Use any tools you need - you have full access including spawning subagents
 4. If blocked (need decision, unclear requirement, external dependency), stop and report
@@ -30,7 +48,7 @@ or feel context getting heavy (~15-20 turns), then summarize and exit.
 ## Exit Criteria
 
 Stop and return your summary when ANY of these apply:
-- Section implementation is complete
+- Work unit implementation is complete
 - You hit a blocker requiring decisions from the outer loop
 - You've made ~15-20 tool calls and should find a stopping point
 - Context feels heavy (you're losing track of earlier work)
@@ -59,11 +77,26 @@ next_steps:
   - "Another follow-up item"
 ```
 
-Be specific in your summary - the outer loop will use this for magi review.
+Be specific in your summary - the outer loop will use this for review.
 ```
 
 ## Substitution Variables
 
-- `{{FULL_PLAN_MARKDOWN}}`: The entire plan file content (frontmatter + body)
-- `{{SECTION_NAME}}`: The `## ` heading being worked on
-- `{{SECTION_CONTENT}}`: The content under that heading until the next `## `
+Required:
+- `{{FULL_STATE_MARKDOWN}}`: The entire state file content (frontmatter + body)
+- `{{WORK_UNIT_NAME}}`: The work unit being implemented (section heading, criterion text, etc.)
+- `{{WORK_UNIT_CONTENT}}`: Details about the work unit (section content, related context)
+
+Optional (include if present in state file):
+- `{{PROJECT_GUIDANCE}}`: Contents of .ralph.md if found
+- `{{KNOWN_BAD_ROUTES}}`: Approaches that failed (from state file)
+- `{{VERIFIED_FINDINGS}}`: Validated facts (from state file)
+
+## Notes
+
+The template uses mustache-style conditionals (`{{#if}}...{{/if}}`) for optional sections.
+If a variable is not available, omit that section entirely.
+
+Project guidance is critical context - always include it when available. It tells the
+inner loop how progress should be tracked, what review expectations are, and any
+project-specific conventions to follow.
