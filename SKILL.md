@@ -142,7 +142,11 @@ Set review timestamp.
 
 Based on review recommendation:
 
-**`continue`**: Go to step 2.
+**`continue`**:
+- Add any `gaps_discovered` or `edge_cases_discovered` from review to state file
+- Go to step 2
+
+Note: This naturally handles "conditional pass" - issues are tracked and prevent archiving until resolved.
 
 **`needs_human_input`**:
 - Use AskUserQuestion to surface the decision
