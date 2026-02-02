@@ -1,6 +1,7 @@
 ---
 name: double-ralph
 description: Iterative implementation loop with review checkpoints. Use for multi-step tasks that benefit from chunked execution and verification. Adapts to project-specific conventions via .ralph.md guidance file.
+allowed-tools: [Task, Read, Write, Edit, Glob, Grep, Skill, AskUserQuestion, Bash]
 ---
 
 # Double Ralph: Iterative Implementation Loop
@@ -16,6 +17,40 @@ Execute work through iterative cycles with review checkpoints between chunks.
 Examples:
 - `/double-ralph plans/my-feature.md` - Execute a plan file
 - `/double-ralph` - Auto-detect state file per project guidance
+
+## When to Use
+
+- Multi-step implementation tasks (3+ work units)
+- Plans with clear acceptance criteria or sections
+- Tasks benefiting from review checkpoints between chunks
+- Work that may span multiple context windows
+
+## When NOT to Use
+
+- **Simple single-step tasks**: One function, one bug fix—just do it directly
+- **Exploration/research tasks**: Use Task with `subagent_type: Explore` instead
+- **Tasks needing parallel execution**: Inner loops run sequentially; parallel coordination adds context burden without speedup
+- **Unclear requirements**: Clarify first, then plan, then double-ralph
+- **Tasks estimated >60 minutes**: Split into separate plans; long sessions hit context exhaustion
+
+## Guardrails
+
+Double-ralph enforces limits to prevent context exhaustion:
+
+| Threshold | Action |
+|-----------|--------|
+| 30 minutes | Log warning, suggest checkpoint |
+| 45 minutes | Recommend breaking to new session |
+| 60 minutes | Force checkpoint, prompt user to split plan |
+| 3 consecutive no-progress iterations | Circuit breaker: escalate to user |
+| Inner loop max turns (20) | Force exit, return partial summary |
+
+Track iteration progress in state file frontmatter:
+```yaml
+iterations: 0
+no_progress_count: 0
+started_at: 2026-01-30T10:00:00Z
+```
 
 ## Project Guidance
 
@@ -60,6 +95,9 @@ gaps: []
 edge_cases: []
 progress: []
 last_review: null
+iterations: 0
+no_progress_count: 0
+started_at: null  # Set to current timestamp on first ASSESS
 ---
 
 # Title
@@ -74,11 +112,24 @@ If file lacks frontmatter, add defaults.
 
 - Check completion status → if complete/archived, inform user and exit
 - Update status to `in_progress` if pending
+- **Initialize guardrails** (first iteration only):
+  - If `started_at` is null, set to current timestamp (run `date -Iseconds`)
+  - If `iterations` is missing, set to 0
+- **Check guardrails**:
+  - Compare current time to `started_at` → warn at 30min, recommend break at 45min, force checkpoint at 60min
+  - Check `no_progress_count` → escalate to user if >= 3
 - Identify work units per guidance:
   - **Default**: `## ` headings not in progress array
   - **Per guidance**: acceptance criteria, issues, custom sections
 - Group related units if guidance suggests logical groupings
 - If all units complete → proceed to final review
+
+**Work unit prioritization:**
+1. Resume any `status: partial` unit from previous iteration
+2. Pick first incomplete unit in document order
+3. If a unit depends on another, complete the dependency first
+
+**Atomic sizing:** Each work unit should fit in one context window. If a unit seems too large (multiple files, complex logic), split it before starting.
 
 ### 3. SPAWN INNER LOOP
 
@@ -88,15 +139,20 @@ Use the Task tool to spawn a subagent:
 Task(
   subagent_type: "general-purpose",
   description: "Implement: [work unit summary]",
+  max_turns: 20,
   prompt: [see inner-prompt.md, include project guidance if present]
 )
 ```
 
 Inner loop works until:
-- Work unit complete
+- Work unit complete (emit `<promise>UNIT_COMPLETE</promise>`)
 - Blocked (needs decision, unclear requirement)
-- ~15-20 turns (context management)
+- Max turns reached (hard limit: 20)
 - Context feels heavy
+
+**Completion signals:** The `<promise>UNIT_COMPLETE</promise>` tag signals intent; the YAML `status: completed` field in the return summary is canonical. Outer loop checks for both: promise presence confirms the inner loop believes work is done, status field is used for routing logic.
+
+**Subagent limitation:** Inner loops cannot spawn their own subagents. If work requires parallel execution, return to outer loop and let it coordinate.
 
 Returns structured summary (see inner-prompt.md for format).
 
@@ -128,7 +184,12 @@ Return structured assessment:
 - rationale: [brief explanation]"
 ```
 
-**Fallback**: If magi unavailable, perform the review yourself.
+**Fallback (self-review)**: If magi unavailable, review the work yourself using these criteria:
+1. **Tests pass?** Run the test suite and verify green
+2. **Files changed match intent?** Compare changed files to work unit scope
+3. **New gaps?** Grep for TODO, FIXME, or incomplete implementations
+4. **Edge cases?** Check error handling and boundary conditions
+5. **Verdict**: Apply same pass/fail/needs_work logic as magi would
 
 ### 5. UPDATE STATE
 
@@ -136,7 +197,14 @@ Update the state file per guidance:
 - **Default**: Update frontmatter arrays (gaps, edge_cases, progress)
 - **Per guidance**: Check off criteria, append to sections, etc.
 
-Set review timestamp.
+**Update guardrail tracking:**
+- Increment `iterations`
+- If inner loop returned `status: partial` AND `files_changed` is empty:
+  - Increment `no_progress_count`
+- Else:
+  - Reset `no_progress_count` to 0
+
+Set review timestamp (`last_review`).
 
 ### 6. ROUTE
 
@@ -155,7 +223,11 @@ Note: This naturally handles "conditional pass" - issues are tracked and prevent
 
 **`archive`** (or equivalent completion):
 - Verify no remaining gaps/issues per guidance
-- Mark complete and move/archive per guidance
+- Mark status as `archived` in frontmatter
+- Move file to `plans/archived/` (or per guidance)
+- Stage only relevant files: state file + files from `files_changed` arrays
+- Use AskUserQuestion to confirm commit: "Ready to commit completion of [plan title]. Proceed?"
+- If confirmed: `git commit -m "Complete: [plan title]"`
 - If issues remain → inform user, continue to step 2
 
 ## Completion Criteria
@@ -169,10 +241,24 @@ The loop completes when:
 
 | Scenario | Action |
 |----------|--------|
-| Magi unavailable | Self-review (continue functioning) |
+| Magi unavailable | Self-review using fallback criteria |
 | Inner loop blocked | Surface via AskUserQuestion |
 | State file parse error | Show error, ask user to fix |
 | No .ralph.md | Offer to create or use defaults |
+| 3+ no-progress iterations | Circuit breaker: stop loop, escalate to user |
+| Duration >60 min | Force checkpoint, prompt to split plan |
+| Inner loop max turns | Force exit, return partial summary |
+
+**Circuit breaker logic:**
+```
+if inner_loop.status == "partial" and no files_changed:
+  state.no_progress_count += 1
+else:
+  state.no_progress_count = 0
+
+if state.no_progress_count >= 3:
+  AskUserQuestion("Loop stuck after 3 iterations with no progress. Options?")
+```
 
 ## Manual Control
 

@@ -30,8 +30,8 @@ Double Ralph is a nested loop system:
 │  │              INNER LOOP (subagent)              │   │
 │  │                                                 │   │
 │  │  • Receives: plan context + current focus       │   │
-│  │  • Works until: blocked OR ~15-20 turns OR      │   │
-│  │    feels context getting heavy                  │   │
+│  │  • Works until: blocked OR max 20 turns OR      │   │
+│  │    context pressure                             │   │
 │  │  • Returns: summary of work done, blockers,     │   │
 │  │    any discovered gaps/edge cases               │   │
 │  └─────────────────────────────────────────────────┘   │
@@ -55,8 +55,8 @@ The outer loop archives the plan when:
 
 Each inner loop works until one of:
 - **Blocked**: Hits a decision point or blocker requiring outer loop/human input
-- **Context pressure**: Falls below ~33% available context window
-- **Turn heuristic**: After ~15-20 turns, looks for natural stopping points
+- **Context pressure**: Losing track of earlier work
+- **Turn limit**: Hard limit of 20 turns
 
 The inner loop returns a structured summary including:
 - Work completed
@@ -169,6 +169,6 @@ All state lives in the plan file itself (YAML frontmatter). No separate state fi
 
 ## Inner Loop Subagent
 
-The inner loop is a Task subagent with full tool access (including spawning its own subagents if needed).
+The inner loop is a Task subagent with limited tool access (Read, Write, Edit, Bash, Glob, Grep). Inner loops **cannot spawn their own subagents** - if work requires parallel execution, they must return to the outer loop.
 
 See `inner-prompt.md` for the prompt template with substitution variables.

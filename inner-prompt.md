@@ -5,8 +5,8 @@ Use this template when spawning the inner loop Task subagent.
 ## Template
 
 ```markdown
-You are implementing part of a larger task. Work until you hit a blocker
-or feel context getting heavy (~15-20 turns), then summarize and exit.
+You are implementing part of a larger task. Work until complete, blocked,
+or approaching limits (max 20 turns), then summarize and exit.
 
 {{#if PROJECT_GUIDANCE}}
 ## Project Guidance
@@ -40,18 +40,22 @@ or feel context getting heavy (~15-20 turns), then summarize and exit.
 
 1. Implement the current work unit
 2. Run tests as you go to verify your work
-3. Use any tools you need - you have full access including spawning subagents
-4. If blocked (need decision, unclear requirement, external dependency), stop and report
-5. If you've made ~15-20 turns or context feels heavy, find a natural stopping point
-6. Return a structured summary in the format below
+3. Use any tools you need (Read, Write, Edit, Bash, Glob, Grep)
+4. **Do NOT spawn subagents** - if work requires parallel execution, return to outer loop
+5. If blocked (need decision, unclear requirement, external dependency), stop and report
+6. After max 20 turns or if context feels heavy, find a stopping point
+7. Return a structured summary in the format below
+8. If work unit is complete, emit: `<promise>UNIT_COMPLETE</promise>`
 
 ## Exit Criteria
 
 Stop and return your summary when ANY of these apply:
-- Work unit implementation is complete
-- You hit a blocker requiring decisions from the outer loop
-- You've made ~15-20 tool calls and should find a stopping point
-- Context feels heavy (you're losing track of earlier work)
+- Work unit complete → emit `<promise>UNIT_COMPLETE</promise>` AND set `status: completed` in summary
+- Blocked → set `status: blocked` in summary
+- Turn limit → max 20 turns reached, set `status: partial` in summary
+- Context pressure → losing track of earlier work, set `status: partial` in summary
+
+**Note:** The `<promise>UNIT_COMPLETE</promise>` tag signals intent to complete; the YAML `status` field is canonical for routing.
 
 ## Summary Format
 

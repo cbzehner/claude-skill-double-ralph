@@ -161,8 +161,8 @@ Frontmatter gets added automatically if missing.
 │  Inner Ralph exits when:                                │
 │  • Work unit complete                                   │
 │  • Hit a blocker                                        │
-│  • ~15-20 turns (context getting heavy)                 │
-│  • Existential crisis                                   │
+│  • Max 20 turns (hard limit)                            │
+│  • Context pressure                                     │
 └─────────────────────────────────────────────────────────┘
 ```
 
