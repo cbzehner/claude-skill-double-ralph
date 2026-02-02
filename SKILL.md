@@ -1,22 +1,22 @@
 ---
-name: double-ralph
+name: ralph
 description: Iterative implementation loop with review checkpoints. Use for multi-step tasks that benefit from chunked execution and verification. Adapts to project-specific conventions via .ralph.md guidance file.
 allowed-tools: [Task, Read, Write, Edit, Glob, Grep, Skill, AskUserQuestion, Bash]
 ---
 
-# Double Ralph: Iterative Implementation Loop
+# Ralph: Iterative Implementation Loop
 
 Execute work through iterative cycles with review checkpoints between chunks.
 
 ## Invocation
 
 ```
-/double-ralph [state-file]
+/ralph [state-file]
 ```
 
 Examples:
-- `/double-ralph plans/my-feature.md` - Execute a plan file
-- `/double-ralph` - Auto-detect state file per project guidance
+- `/ralph plans/my-feature.md` - Execute a plan file
+- `/ralph` - Auto-detect state file per project guidance
 
 ## When to Use
 
@@ -30,12 +30,12 @@ Examples:
 - **Simple single-step tasks**: One function, one bug fix—just do it directly
 - **Exploration/research tasks**: Use Task with `subagent_type: Explore` instead
 - **Tasks needing parallel execution**: Inner loops run sequentially; parallel coordination adds context burden without speedup
-- **Unclear requirements**: Clarify first, then plan, then double-ralph
+- **Unclear requirements**: Clarify first, then plan, then ralph
 - **Tasks estimated >60 minutes**: Split into separate plans; long sessions hit context exhaustion
 
 ## Guardrails
 
-Double-ralph enforces limits to prevent context exhaustion:
+Ralph enforces limits to prevent context exhaustion:
 
 | Threshold | Action |
 |-----------|--------|
@@ -54,7 +54,7 @@ started_at: 2026-01-30T10:00:00Z
 
 ## Project Guidance
 
-Double-ralph adapts to project-specific conventions via a `.ralph.md` file.
+Ralph adapts to project-specific conventions via a `.ralph.md` file.
 
 ### Finding .ralph.md
 
@@ -262,7 +262,7 @@ if state.no_progress_count >= 3:
 
 ## Manual Control
 
-Interrupt anytime. State file preserves progress. Resume with `/double-ralph [state-file]`.
+Interrupt anytime. State file preserves progress. Resume with `/ralph [state-file]`.
 
 ## Reference
 

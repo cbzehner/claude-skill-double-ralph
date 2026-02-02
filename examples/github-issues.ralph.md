@@ -6,9 +6,9 @@ For projects that track work as GitHub issues.
 
 Work is tracked in GitHub issues, not local files.
 
-When `/double-ralph` is invoked with an issue number:
+When `/ralph` is invoked with an issue number:
 ```
-/double-ralph #123
+/ralph #123
 ```
 
 Fetch the issue:

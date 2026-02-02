@@ -1,10 +1,10 @@
-# Double Ralph: Architecture
+# Ralph: Architecture
 
 The serious documentation for when things get real.
 
 ## Overview
 
-Double Ralph is a nested loop system:
+Ralph is a nested loop system:
 - **Outer loop**: Orchestrates planning, spawns workers, runs reviews, updates state
 - **Inner loop**: Task subagent that implements one section of the plan
 
@@ -122,7 +122,7 @@ When magi flags something requiring human decision:
 ## Outer Loop Flow (Detailed)
 
 ```
-/double-ralph plans/my-feature.md
+/ralph plans/my-feature.md
 
 1. LOAD
    - Read plan file

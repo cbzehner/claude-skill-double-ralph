@@ -8,7 +8,7 @@ last_review: null
 
 # Example Feature: User Authentication
 
-This is an example plan file showing the expected format for `/double-ralph`.
+This is an example plan file showing the expected format for `/ralph`.
 
 ## Section 1: Database Schema
 

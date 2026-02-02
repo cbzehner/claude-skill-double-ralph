@@ -1,10 +1,10 @@
 # Crafting .ralph.md Files
 
-A `.ralph.md` file provides project-specific guidance for the double-ralph iterative implementation loop. It tells Claude how your project organizes work, tracks progress, and signals completion.
+A `.ralph.md` file provides project-specific guidance for the ralph iterative implementation loop. It tells Claude how your project organizes work, tracks progress, and signals completion.
 
 ## Purpose
 
-Without a `.ralph.md`, double-ralph uses default plan-file conventions:
+Without a `.ralph.md`, ralph uses default plan-file conventions:
 - State in YAML frontmatter + markdown sections
 - Work units = `## ` headings
 - Progress = frontmatter arrays
@@ -14,7 +14,7 @@ A `.ralph.md` lets you adapt this to your project's conventions.
 
 ## Location
 
-Place `.ralph.md` at your **git repository root**. Double-ralph finds it via:
+Place `.ralph.md` at your **git repository root**. Ralph finds it via:
 1. `git rev-parse --show-toplevel` → check for `.ralph.md`
 2. Walk up directory tree as fallback
 
@@ -128,7 +128,7 @@ Check off criteria as completed.
 /stuck "reason" # When blocked
 ```
 
-### Plan-Based Projects (Original double-ralph)
+### Plan-Based Projects (Original ralph)
 
 ```markdown
 ## Work Units
@@ -181,7 +181,7 @@ Resume after human approves or requests changes.
 
 ## Testing Your .ralph.md
 
-1. Run `/double-ralph` on a small task
+1. Run `/ralph` on a small task
 2. Check that Claude correctly identifies work units
 3. Verify progress tracking works as expected
 4. Confirm completion signals are correct
@@ -190,7 +190,7 @@ If Claude misinterprets something, clarify that section of your `.ralph.md`.
 
 ## Generating .ralph.md
 
-If you don't have a `.ralph.md` and run `/double-ralph`, you'll be offered the option to create one. The skill will ask questions about:
+If you don't have a `.ralph.md` and run `/ralph`, you'll be offered the option to create one. The skill will ask questions about:
 
 - Where your state files live
 - How work is organized (sections, criteria, issues)

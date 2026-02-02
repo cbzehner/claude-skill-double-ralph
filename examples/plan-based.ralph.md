@@ -1,6 +1,6 @@
 # .ralph.md - Plan-Based Project
 
-This is the original double-ralph approach: plan files with markdown sections.
+This is the original ralph approach: plan files with markdown sections.
 
 ## State Files
 

@@ -1,4 +1,4 @@
-# Double Ralph
+# Ralph
 
 Iterative implementation loops with review checkpoints. What could possibly go wrong?
 
@@ -29,7 +29,7 @@ Iterative implementation loops with review checkpoints. What could possibly go w
 
 ## Why?
 
-Long tasks lose context. Claude forgets what it was doing 47 tool calls ago. Double Ralph fixes this by:
+Long tasks lose context. Claude forgets what it was doing 47 tool calls ago. Ralph fixes this by:
 
 1. **Chunking work** - Inner Ralphs work on one unit at a time
 2. **Reviewing progress** - Magi checks each chunk before continuing
@@ -46,27 +46,27 @@ Works best with [magi](https://github.com/cbzehner/claude-skill-magi) installed 
 ### From Marketplace
 
 ```bash
-/plugin marketplace add cbzehner/claude-skill-double-ralph
-/plugin install double-ralph@cbzehner
+/plugin marketplace add cbzehner/claude-skill-ralph
+/plugin install ralph@cbzehner
 ```
 
 ### Manual Installation
 
 ```bash
 cd ~/.claude/skills/
-git clone https://github.com/cbzehner/claude-skill-double-ralph.git double-ralph
+git clone https://github.com/cbzehner/claude-skill-ralph.git ralph
 ```
 
 ## Usage
 
 ```
-/double-ralph [state-file]
+/ralph [state-file]
 ```
 
 Point it at a plan or task file and watch the Ralphs go:
 
 ```
-You: /double-ralph plans/auth-system.md
+You: /ralph plans/auth-system.md
 
 Claude: [Outer Ralph reads the plan]
         [Spawns Inner Ralph for Section 1]
@@ -79,7 +79,7 @@ Claude: [Outer Ralph reads the plan]
 
 ## Project Guidance (.ralph.md)
 
-Double-ralph adapts to your project's conventions via a `.ralph.md` file at your repo root.
+Ralph adapts to your project's conventions via a `.ralph.md` file at your repo root.
 
 ### What It Does
 
@@ -93,7 +93,7 @@ With `.ralph.md`: Adapts to your project's way of doing things:
 
 ### Creating One
 
-Run `/double-ralph` without a `.ralph.md` and you'll be offered the choice to create one. The skill asks questions about your project and generates a starter file.
+Run `/ralph` without a `.ralph.md` and you'll be offered the choice to create one. The skill asks questions about your project and generates a starter file.
 
 Or see `examples/` for templates:
 - `plan-based.ralph.md` - Traditional plan files with ## sections
@@ -188,7 +188,7 @@ Until then, the Ralphs keep Ralphing.
 ## Files
 
 ```
-double-ralph/
+ralph/
 ├── SKILL.md              # The actual skill
 ├── inner-prompt.md       # Template for Inner Ralph
 ├── README.md             # You are here
@@ -208,7 +208,7 @@ double-ralph/
 
 ## Manual Override
 
-Interrupt anytime. State is saved to file. Come back later and `/double-ralph` picks up where it left off. The Ralphs are patient.
+Interrupt anytime. State is saved to file. Come back later and `/ralph` picks up where it left off. The Ralphs are patient.
 
 ## License
 
